@@ -1,18 +1,16 @@
 import os
-
 from pathlib import Path
-
 import gradio as gr
-
 import asyncio
-
 import pandas as pd
 from asyncflows import AsyncFlows
 from asyncflows.utils.async_utils import merge_iterators
-
 from asyncflows.log_config import get_logger
 
+# Initialize the logger
+log = get_logger()
 
+# Gradio interface definition
 with gr.Blocks() as demo:
     query = gr.Textbox(label="Problem", placeholder="Provide a problem to think about")
     submit_button = gr.Button("Submit")
@@ -24,6 +22,7 @@ with gr.Blocks() as demo:
         yellow_hat = gr.Textbox(label="Yellow Hat", interactive=False)
         green_hat = gr.Textbox(label="Green Hat", interactive=False)
     blue_hat = gr.Textbox(label="Blue Hat (synthesis)", interactive=False)
+    my_hat = gr.Textbox(label="My Hat", interactive=False)
 
     async def handle_submit(query):
         # Clear the output fields
@@ -34,43 +33,48 @@ with gr.Blocks() as demo:
             yellow_hat: "",
             green_hat: "",
             blue_hat: "",
+            my_hat: "",
         }
 
-        # Load the chatbot flow
-        flow = AsyncFlows.from_file("debono.yaml").set_vars(
-            query=query,
-        )
+        try:
+            # Load the chatbot flow
+            flow = AsyncFlows.from_file("debono.yaml").set_vars(query=query)
+          
+            # Stream the hats
+            async for hat, outputs in merge_iterators(
+                log,
+                [
+                    white_hat,
+                    red_hat,
+                    black_hat,
+                    yellow_hat,
+                    green_hat
+                ],
+                [
+                    flow.stream('white_hat.result'),
+                    flow.stream('red_hat.result'),
+                    flow.stream('black_hat.result'),
+                    flow.stream('yellow_hat.result'),
+                    flow.stream('green_hat.result'),
+                ],
+            ):
+                yield {hat: outputs}
 
-        log = get_logger()
+            # Stream the blue hat (synthesis)
+            async for outputs in flow.stream("blue_hat.result"):
+                yield {blue_hat: outputs}
 
-        # Stream the hats
-        async for hat, outputs in merge_iterators(
-            log,
-            [
-                white_hat,
-                red_hat,
-                black_hat,
-                yellow_hat,
-                green_hat
-            ],
-            [
-                flow.stream('white_hat.result'),
-                flow.stream('red_hat.result'),
-                flow.stream('black_hat.result'),
-                flow.stream('yellow_hat.result'),
-                flow.stream('green_hat.result'),
-            ],
-        ):
+        except Exception as e:
+            # Handle any errors that occur during the flow execution
+            log.error(f"An error occurred: {e}")
             yield {
-                hat: outputs
+                white_hat: "Error",
+                red_hat: "Error",
+                black_hat: "Error",
+                yellow_hat: "Error",
+                green_hat: "Error",
+                blue_hat: "Error",
             }
-
-        # Stream the blue hat
-        async for outputs in flow.stream("blue_hat.result"):
-            yield {
-                blue_hat: outputs
-            }
-
 
     submit_button.click(
         fn=handle_submit,
@@ -84,7 +88,6 @@ with gr.Blocks() as demo:
             blue_hat
         ],
     )
-
 
 if __name__ == "__main__":
     demo.launch()

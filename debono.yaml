@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/asynchronous-flows/asyncflows/main/schemas/asyncflows_schema.json
+# asyncflows-language-server
 
 default_model:
   model: claude-3-opus-20240229
@@ -103,11 +103,19 @@ flow:
         link: yellow_hat.result
       - heading: Green Hat
         link: green_hat.result
+      - heading: Another hat
+        link: my_hat.result
       - text: |
           Review and synthesize the information and ideas generated from the other hats. 
           Assess which ideas are most feasible and effective based on the facts (White Hat), emotions (Red Hat), risks (Black Hat), benefits (Yellow Hat), and creative solutions (Green Hat). 
           How can these insights be integrated into a coherent strategy? 
           Outline a plan with clear steps or actions, indicating responsibilities, deadlines, and milestones. 
           Consider how you will monitor progress and what criteria you will use to evaluate success.
+  my_hat:
+    action: prompt
+    prompt:
+      - heading: Problem
+        var: query
+      - text: How should I think? 
 
 default_output: blue_hat.result
